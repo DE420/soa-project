@@ -8,7 +8,7 @@ WORKDIR /opt/app
 COPY .mvn/ .mvn
 
 # Copy Maven wrapper script and the project's POM file
-COPY mvnw ./
+COPY mvnw .
 COPY reservation-service/parent.pom.xml ./pom.xml
 
 # project parent copy
