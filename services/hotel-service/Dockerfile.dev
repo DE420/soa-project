@@ -1,4 +1,3 @@
-###
 FROM eclipse-temurin:21-jdk-jammy as builder
 
 # Set the working directory inside the container
@@ -9,18 +8,18 @@ COPY .mvn/ .mvn
 
 # Copy Maven wrapper script and the project's POM file
 COPY mvnw .
-COPY hotel-service/parent.pom.xml ./pom.xml
+COPY services/hotel-service/parent.pom.xml ./pom.xml
 
 # project parent copy
 COPY outbox/pom.xml ./outbox/pom.xml
-COPY hotel-service/pom.xml ./hotel-service/pom.xml
+COPY services/hotel-service/pom.xml ./hotel-service/pom.xml
 
 # Download dependencies using Maven wrapper
 RUN ./mvnw dependency:go-offline
 
 # Copy the application source code
 COPY outbox/src/main ./outbox/src/main
-COPY hotel-service/src/main ./hotel-service/src/main
+COPY services/hotel-service/src/main ./hotel-service/src/main
 # Build the application
 RUN ./mvnw clean install
 

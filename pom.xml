@@ -15,9 +15,9 @@
     <packaging>pom</packaging>
     <modules>
         <module>outbox</module>
-        <module>hotel-service</module>
-        <module>payment-service</module>
-        <module>reservation-service</module>
+        <module>services/hotel-service</module>
+        <module>services/payment-service</module>
+        <module>services/reservation-service</module>
     </modules>
     <description>Spring-Boot Saga Orchestration Demo</description>
 
