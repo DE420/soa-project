@@ -17,15 +17,14 @@ COPY services/payment-service/pom.xml ./services/payment-service/pom.xml
 COPY services/reservation-service/pom.xml ./services/reservation-service/pom.xml
 COPY api-gateway/pom.xml ./api-gateway/pom.xml
 
-# Download dependencies for reservation-service and its dependencies
-RUN ./mvnw dependency:go-offline -pl services/reservation-service -am
+# Download dependencies for api-gateway
+RUN ./mvnw dependency:go-offline -pl api-gateway -am
 
-# Copy the application source code for reservation-service and its dependencies
-COPY outbox/src/main ./outbox/src/main
-COPY services/reservation-service/src/main ./services/reservation-service/src/main
+# Copy the application source code for api-gateway
+COPY api-gateway/src/main ./api-gateway/src/main
 
-# Build the reservation-service module
-RUN ./mvnw clean install -pl services/reservation-service -am
+# Build the api-gateway module
+RUN ./mvnw clean install -pl api-gateway -am
 
 # Switch to a new stage with the JRE-only base image
 FROM eclipse-temurin:21-jre-jammy
@@ -33,11 +32,11 @@ FROM eclipse-temurin:21-jre-jammy
 # Set the working directory inside the container
 WORKDIR /opt/app
 
-# Expose the default Spring Boot port
-EXPOSE 8080
+# Expose the api-gateway port
+EXPOSE 8085
 
 # Copy the JAR file from the builder stage
-COPY --from=builder /opt/app/services/reservation-service/target/*.jar /opt/app/app.jar
+COPY --from=builder /opt/app/api-gateway/target/api-gateway-1.0-SNAPSHOT.jar /opt/app/app.jar
 
 # Define the entry point to run the application
 ENTRYPOINT ["java", "-jar", "/opt/app/app.jar"]

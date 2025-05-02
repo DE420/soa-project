@@ -5,23 +5,27 @@ WORKDIR /opt/app
 
 # Copy Maven wrapper files
 COPY .mvn/ .mvn
-
-# Copy Maven wrapper script and the project's POM file
 COPY mvnw .
-COPY services/hotel-service/parent.pom.xml ./pom.xml
 
-# project parent copy
+# Copy the root POM file (saga-orchestration)
+COPY pom.xml .
+
+# Copy all module POM files to satisfy Maven's module structure
 COPY outbox/pom.xml ./outbox/pom.xml
-COPY services/hotel-service/pom.xml ./hotel-service/pom.xml
+COPY services/hotel-service/pom.xml ./services/hotel-service/pom.xml
+COPY services/payment-service/pom.xml ./services/payment-service/pom.xml
+COPY services/reservation-service/pom.xml ./services/reservation-service/pom.xml
+COPY api-gateway/pom.xml ./api-gateway/pom.xml
 
-# Download dependencies using Maven wrapper
-RUN ./mvnw dependency:go-offline
+# Download dependencies for hotel-service and its dependencies
+RUN ./mvnw dependency:go-offline -pl services/hotel-service -am
 
-# Copy the application source code
+# Copy the application source code for hotel-service and its dependencies
 COPY outbox/src/main ./outbox/src/main
-COPY services/hotel-service/src/main ./hotel-service/src/main
-# Build the application
-RUN ./mvnw clean install
+COPY services/hotel-service/src/main ./services/hotel-service/src/main
+
+# Build the hotel-service module
+RUN ./mvnw clean install -pl services/hotel-service -am
 
 # Switch to a new stage with the JRE-only base image
 FROM eclipse-temurin:21-jre-jammy
@@ -30,8 +34,10 @@ FROM eclipse-temurin:21-jre-jammy
 WORKDIR /opt/app
 
 # Expose the default Spring Boot port
+EXPOSE 8080
+
 # Copy the JAR file from the builder stage
-COPY --from=builder /opt/app/hotel-service/target/*.jar /opt/app/*.jar
+COPY --from=builder /opt/app/services/hotel-service/target/*.jar /opt/app/app.jar
 
 # Define the entry point to run the application
-ENTRYPOINT ["java", "-jar", "/opt/app/*.jar"]
+ENTRYPOINT ["java", "-jar", "/opt/app/app.jar"]

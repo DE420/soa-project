@@ -1,0 +1,31 @@
+server:
+  port: 8085
+
+spring:
+  main:
+    web-application-type: reactive
+  application:
+    name: api-gateway
+  cloud:
+    gateway:
+      routes:
+        - id: hotel-service
+          uri: http://hotel-service:8080
+          predicates:
+            - Path=/hotel/**
+          filters:
+            - StripPrefix=1
+
+        - id: payment-service
+          uri: http://payment-service:8080
+          predicates:
+            - Path=/payment/**
+          filters:
+            - StripPrefix=1
+
+        - id: reservation-service
+          uri: http://reservation-service:8080
+          predicates:
+            - Path=/api/v1/reservations/**
+          filters:
+            - StripPrefix=2

@@ -220,6 +220,23 @@ services:
     networks:
       - local-network
 
+  # api-gateway
+  api-gateway:
+    container_name: 'api-gateway'
+    build:
+      context: .
+      dockerfile: api-gateway/Dockerfile
+    ports:
+      - '8085:8085'
+    environment:
+      - SPRING_MAIN_WEB_APPLICATION_TYPE=reactive
+    depends_on:
+      - reservation-service
+      - payment-service
+      - hotel-service
+    networks:
+      - local-network
+
 networks:
   local-network:
     name: saga-orchestration-network
