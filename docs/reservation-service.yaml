@@ -1,0 +1,217 @@
+openapi: 3.0.3
+info:
+  title: Reservation Service API
+  description: API cho dịch vụ đặt phòng sử dụng mô hình Saga orchestration. Hệ thống xử lý đặt phòng và thanh toán thông qua các sự kiện được đồng bộ bởi Kafka và Debezium, với dữ liệu lưu trữ trong Postgres.
+  version: 1.0.0
+
+servers:
+  - url: http://localhost:8080/v1
+    description: Local development server
+  - url: http://reservation-service:8080/v1
+    description: Reservation service in Docker Compose environment
+
+paths:
+  /reservations:
+    post:
+      summary: Tạo một đặt phòng mới
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/RoomReservationCmd'
+      responses:
+        '202':
+          description: Đã chấp nhận, đang xử lý Saga
+          headers:
+            Location:
+              description: URL truy cập đặt phòng
+              schema:
+                type: string
+            Retry-After:
+              description: Thời gian đợi để retry (giây)
+              schema:
+                type: string
+          content:
+            application/json:
+              schema:
+                type: object
+        '400':
+          description: Yêu cầu không hợp lệ
+
+  /reservations/{reservationId}:
+    get:
+      summary: Lấy thông tin đặt phòng theo ID
+      parameters:
+        - in: path
+          name: reservationId
+          required: true
+          schema:
+            type: string
+            format: uuid
+      responses:
+        '200':
+          description: Trả về thông tin đặt phòng
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ReservationResource'
+        '404':
+          description: Không tìm thấy đặt phòng
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiError'
+
+  /reservations/{reservationId}/cancel:
+    post:
+      summary: Hủy đặt phòng theo ID
+      description: Kích hoạt hành động hủy đặt phòng, có thể dẫn đến trạng thái CANCELED hoặc REFUND.
+      parameters:
+        - in: path
+          name: reservationId
+          required: true
+          schema:
+            type: string
+            format: uuid
+      responses:
+        '200':
+          description: Đặt phòng đã được hủy
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ReservationResource'
+        '404':
+          description: Không tìm thấy đặt phòng
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiError'
+
+  /reservations/{reservationId}/saga-status:
+    get:
+      summary: Lấy trạng thái các bước trong Saga
+      description: |
+        Trả về trạng thái của các bước trong Saga:
+        - room-booking: Đặt phòng (BOOKED, REJECTED, CANCELLED).
+        - payment: Thanh toán.
+      parameters:
+        - in: path
+          name: reservationId
+          required: true
+          schema:
+            type: string
+            format: uuid
+      responses:
+        '200':
+          description: Danh sách trạng thái các bước trong Saga
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  reservationId:
+                    type: string
+                    format: uuid
+                  steps:
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/SagaStep'
+        '404':
+          description: Không tìm thấy thông tin Saga
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiError'
+
+components:
+  schemas:
+    RoomReservationCmd:
+      type: object
+      required:
+        - hotelId
+        - roomId
+        - startDate
+        - endDate
+        - guestId
+        - paymentDue
+        - creditCardNo
+      properties:
+        hotelId:
+          type: integer
+          format: int64
+        roomId:
+          type: integer
+          format: int64
+        startDate:
+          type: string
+          format: date
+        endDate:
+          type: string
+          format: date
+        guestId:
+          type: integer
+          format: int64
+        paymentDue:
+          type: integer
+          format: int64
+        creditCardNo:
+          type: string
+          maxLength: 19
+          description: Số thẻ tín dụng (chỉ lưu trữ tạm thời, cần mã hóa).
+      example:
+        hotelId: 1
+        roomId: 101
+        startDate: "2025-05-03"
+        endDate: "2025-05-05"
+        guestId: 1001
+        paymentDue: 2000000
+        creditCardNo: "4111111111111111"
+
+    ReservationResource:
+      type: object
+      properties:
+        reservationId:
+          type: string
+          format: uuid
+        hotelId:
+          type: integer
+          format: int64
+        roomId:
+          type: integer
+          format: int64
+        guestId:
+          type: integer
+          format: int64
+        status:
+          type: string
+          enum: [PENDING, SUCCEED, FAILED, CANCELED, REFUND]
+          description: |
+            Trạng thái tổng thể của đặt phòng:
+            - PENDING: Saga đang xử lý (room booking hoặc payment chưa hoàn tất).
+            - SUCCEED: Cả room booking và payment đều thành công.
+            - FAILED: Một trong hai bước (room booking hoặc payment) thất bại.
+            - CANCELED: Đặt phòng bị hủy (do người dùng hoặc hệ thống).
+            - REFUND: Đặt phòng bị hủy và đã hoàn tiền (nếu thanh toán đã thực hiện).
+        createdAt:
+          type: string
+          format: date-time
+      example:
+        reservationId: "550e8400-e29b-41d4-a716-446655440000"
+        hotelId: 1
+        roomId: 101
+        guestId: 1001
+        status: PENDING
+        createdAt: "2025-05-02T10:00:00Z"
+
+    ApiError:
+      type: object
+      properties:
+        message:
+          type: string
+        code:
+          type: string
+        details:
+          type: string
+      example:
+        message: "Reservatio
