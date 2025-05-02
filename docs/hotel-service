@@ -1,0 +1,252 @@
+openapi: 3.0.3
+info:
+  title: Hotel Service API
+  description: API cho dịch vụ Hotel Service trong hệ thống Saga orchestration. Hotel Service xử lý yêu cầu đặt phòng, nhận sự kiện từ Kafka (room-booking.outbox.events), và phản hồi qua Kafka (room-booking.inbox.events). Dữ liệu được lưu trữ trong Postgres.
+  version: 1.0.0
+
+servers:
+  - url: http://localhost:8081/v1
+    description: Local development server
+  - url: http://hotel-service:8081/v1
+    description: Hotel service in Docker Compose environment
+
+paths:
+  /hotels/{hotelId}/rooms/{roomId}/availability:
+    get:
+      summary: Kiểm tra tính khả dụng của phòng
+      description: Trả về thông tin về tính khả dụng của phòng trong khoảng thời gian được chỉ định.
+      parameters:
+        - in: path
+          name: hotelId
+          required: true
+          schema:
+            type: integer
+            format: int64
+        - in: path
+          name: roomId
+          required: true
+          schema:
+            type: integer
+            format: int64
+        - in: query
+          name: startDate
+          required: true
+          schema:
+            type: string
+            format: date
+        - in: query
+          name: endDate
+          required: true
+          schema:
+            type: string
+            format: date
+      responses:
+        '200':
+          description: Thông tin tính khả dụng của phòng
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/RoomAvailability'
+        '400':
+          description: Yêu cầu không hợp lệ (ví dụ: ngày không hợp lệ)
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiError'
+        '404':
+          description: Không tìm thấy khách sạn hoặc phòng
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiError'
+
+  /hotels/{hotelId}/rooms/{roomId}/book:
+    post:
+      summary: Đặt phòng
+      description: Xử lý yêu cầu đặt phòng cho một phòng cụ thể. Trong hệ thống Saga, hành động này thường được kích hoạt qua Kafka, nhưng endpoint này cho phép gọi thủ công để kiểm tra.
+      parameters:
+        - in: path
+          name: hotelId
+          required: true
+          schema:
+            type: integer
+            format: int64
+        - in: path
+          name: roomId
+          required: true
+          schema:
+            type: integer
+            format: int64
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/RoomBookingRequest'
+      responses:
+        '200':
+          description: Đặt phòng thành công hoặc thất bại
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/RoomBookingResponse'
+        '400':
+          description: Yêu cầu không hợp lệ
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiError'
+        '404':
+          description: Không tìm thấy khách sạn hoặc phòng
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiError'
+
+  /hotels/{hotelId}/rooms/{roomId}/cancel:
+    post:
+      summary: Hủy đặt phòng
+      description: Hủy một đặt phòng cụ thể, dẫn đến trạng thái CANCELLED. Trong hệ thống Saga, hành động này có thể được kích hoạt qua Kafka như một phần của compensation.
+      parameters:
+        - in: path
+          name: hotelId
+          required: true
+          schema:
+            type: integer
+            format: int64
+        - in: path
+          name: roomId
+          required: true
+          schema:
+            type: integer
+            format: int64
+        - in: query
+          name: reservationId
+          required: true
+          schema:
+            type: string
+            format: uuid
+      responses:
+        '200':
+          description: Hủy đặt phòng thành công
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/RoomBookingResponse'
+        '404':
+          description: Không tìm thấy khách sạn, phòng hoặc đặt phòng
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiError'
+
+components:
+  schemas:
+    RoomBookingRequest:
+      type: object
+      required:
+        - reservationId
+        - startDate
+        - endDate
+        - guestId
+      properties:
+        reservationId:
+          type: string
+          format: uuid
+          description: ID của đặt phòng, được tạo bởi Reservation Service.
+        hotelId:
+          type: integer
+          format: int64
+        roomId:
+          type: integer
+          format: int64
+        startDate:
+          type: string
+          format: date
+        endDate:
+          type: string
+          format: date
+        guestId:
+          type: integer
+          format: int64
+        paymentDue:
+          type: integer
+          format: int64
+        creditCardNo:
+          type: string
+          maxLength: 19
+          description: Số thẻ tín dụng (chỉ lưu trữ tạm thời, cần mã hóa).
+      example:
+        reservationId: "9a40b57d-36a1-4991-9b72-afdd41c154c0"
+        hotelId: 1
+        roomId: 1
+        startDate: "2023-12-16"
+        endDate: "2023-12-17"
+        guestId: 10000001
+        paymentDue: 1702632793441
+        creditCardNo: "************7999"
+
+    RoomBookingResponse:
+      type: object
+      properties:
+        reservationId:
+          type: string
+          format: uuid
+        hotelId:
+          type: integer
+          format: int64
+        roomId:
+          type: integer
+          format: int64
+        status:
+          type: string
+          enum: [BOOKED, REJECTED, CANCELLED]
+          description: |
+            Trạng thái của yêu cầu đặt phòng:
+            - BOOKED: Đặt phòng thành công.
+            - REJECTED: Đặt phòng bị từ chối (ví dụ: phòng không khả dụng).
+            - CANCELLED: Đặt phòng đã bị hủy (thường trong compensation của Saga).
+      example:
+        reservationId: "9a40b57d-36a1-4991-9b72-afdd41c154c0"
+        hotelId: 1
+        roomId: 1
+        status: BOOKED
+
+    RoomAvailability:
+      type: object
+      properties:
+        hotelId:
+          type: integer
+          format: int64
+        roomId:
+          type: integer
+          format: int64
+        startDate:
+          type: string
+          format: date
+        endDate:
+          type: string
+          format: date
+        available:
+          type: boolean
+          description: Phòng có khả dụng trong khoảng thời gian được chỉ định hay không.
+      example:
+        hotelId: 1
+        roomId: 1
+        startDate: "2023-12-16"
+        endDate: "2023-12-17"
+        available: true
+
+    ApiError:
+      type: object
+      properties:
+        message:
+          type: string
+        code:
+          type: string
+        details:
+          type: string
+      example:
+        message: "Room not found"
+        code: "404002"
+        details: "The room with ID 1 in hotel ID 1 does not exist."
