@@ -1,0 +1,179 @@
+openapi: 3.0.3
+info:
+  title: Payment Service API
+  description: API cho dịch vụ Payment Service trong hệ thống Saga orchestration. Payment Service xử lý thanh toán, nhận sự kiện từ Kafka (payment.outbox.events), và phản hồi qua Kafka (payment.inbox.events). Dữ liệu được lưu trữ trong Postgres.
+  version: 1.0.0
+
+servers:
+  - url: http://localhost:8082/v1
+    description: Local development server
+  - url: http://payment-service:8082/v1
+    description: Payment service in Docker Compose environment
+
+paths:
+  /payments/process:
+    post:
+      summary: Xử lý thanh toán
+      description: Xử lý yêu cầu thanh toán cho một đặt phòng. Trong hệ thống Saga, hành động này thường được kích hoạt qua Kafka, nhưng endpoint này cho phép gọi thủ công để kiểm tra.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/PaymentRequest'
+      responses:
+        '200':
+          description: Thanh toán đã được xử lý
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PaymentResponse'
+        '400':
+          description: Yêu cầu không hợp lệ
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiError'
+        '404':
+          description: Không tìm thấy thông tin đặt phòng liên quan
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiError'
+
+  /payments/{paymentId}/cancel:
+    post:
+      summary: Hủy thanh toán
+      description: Hủy một giao dịch thanh toán, dẫn đến trạng thái CANCELLED. Trong hệ thống Saga, hành động này có thể được kích hoạt qua Kafka như một phần của compensation.
+      parameters:
+        - in: path
+          name: paymentId
+          required: true
+          schema:
+            type: string
+            format: uuid
+      responses:
+        '200':
+          description: Hủy thanh toán thành công
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PaymentResponse'
+        '404':
+          description: Không tìm thấy giao dịch thanh toán
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiError'
+
+  /payments/{paymentId}/status:
+    get:
+      summary: Kiểm tra trạng thái thanh toán
+      description: Trả về trạng thái hiện tại của giao dịch thanh toán, hữu ích cho debugging.
+      parameters:
+        - in: path
+          name: paymentId
+          required: true
+          schema:
+            type: string
+            format: uuid
+      responses:
+        '200':
+          description: Trả về trạng thái thanh toán
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PaymentResponse'
+        '404':
+          description: Không tìm thấy giao dịch thanh toán
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiError'
+
+components:
+  schemas:
+    PaymentRequest:
+      type: object
+      required:
+        - reservationId
+        - paymentDue
+        - creditCardNo
+      properties:
+        reservationId:
+          type: string
+          format: uuid
+          description: ID của đặt phòng, được tạo bởi Reservation Service.
+        paymentDue:
+          type: integer
+          format: int64
+          description: Số tiền cần thanh toán (tính bằng cent hoặc đơn vị nhỏ nhất).
+        creditCardNo:
+          type: string
+          maxLength: 19
+          description: Số thẻ tín dụng (chỉ lưu trữ tạm thời, cần mã hóa).
+        hotelId:
+          type: integer
+          format: int64
+        roomId:
+          type: integer
+          format: int64
+        startDate:
+          type: string
+          format: date
+        endDate:
+          type: string
+          format: date
+        guestId:
+          type: integer
+          format: int64
+      example:
+        reservationId: "9a40b57d-36a1-4991-9b72-afdd41c154c0"
+        paymentDue: 1702632793441
+        creditCardNo: "************7999"
+        hotelId: 1
+        roomId: 1
+        startDate: "2023-12-16"
+        endDate: "2023-12-17"
+        guestId: 10000001
+
+    PaymentResponse:
+      type: object
+      properties:
+        paymentId:
+          type: string
+          format: uuid
+        reservationId:
+          type: string
+          format: uuid
+        status:
+          type: string
+          enum: [PAID, FAILED, CANCELLED]
+          description: |
+            Trạng thái của giao dịch thanh toán:
+            - PAID: Thanh toán thành công.
+            - FAILED: Thanh toán thất bại (ví dụ: thẻ không hợp lệ, số dư không đủ).
+            - CANCELLED: Thanh toán đã bị hủy (thường trong compensation của Saga).
+        amount:
+          type: integer
+          format: int64
+          description: Số tiền đã thanh toán hoặc cần hoàn lại (tính bằng cent).
+      example:
+        paymentId: "a1b2c3d4-e5f6-4g7h-8i9j-0k1l2m3n4o5p"
+        reservationId: "9a40b57d-36a1-4991-9b72-afdd41c154c0"
+        status: PAID
+        amount: 1702632793441
+
+    ApiError:
+      type: object
+      properties:
+        message:
+          type: string
+        code:
+          type: string
+        details:
+          type: string
+      example:
+        message: "Payment not found"
+        code: "404003"
+        details: "The payment with ID a1b2c3d4-e5f6-4g7h-8i9j-0k1l2m3n4o5p does not exist."
