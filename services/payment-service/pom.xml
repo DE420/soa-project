@@ -7,15 +7,16 @@
         <groupId>io.example.saga</groupId>
         <artifactId>saga-orchestration</artifactId>
         <version>1.0-SNAPSHOT</version>
+        <relativePath>../../pom.xml</relativePath>
     </parent>
 
-    <artifactId>hotels</artifactId>
+    <artifactId>payments</artifactId>
 
     <dependencies>
         <dependency>
             <groupId>io.example.saga</groupId>
             <artifactId>outbox</artifactId>
-            <version>1.0-SNAPSHOT</version>
+            <version>${project.version}</version>
         </dependency>
 
         <dependency>

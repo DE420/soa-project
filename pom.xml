@@ -15,15 +15,17 @@
     <packaging>pom</packaging>
     <modules>
         <module>outbox</module>
-        <module>hotel-service</module>
-        <module>payment-service</module>
-        <module>reservation-service</module>
+        <module>services/hotel-service</module>
+        <module>services/payment-service</module>
+        <module>services/reservation-service</module>
+        <module>api-gateway</module>
     </modules>
     <description>Spring-Boot Saga Orchestration Demo</description>
 
     <properties>
         <java.verion>21</java.verion>
         <version.debezium>2.4.1.Final</version.debezium>
+        <spring-cloud.version>2023.0.0</spring-cloud.version>
     </properties>
 
     <dependencyManagement>
@@ -33,6 +35,13 @@
                 <artifactId>debezium-testing-testcontainers</artifactId>
                 <version>${version.debezium}</version>
                 <scope>test</scope>
+            </dependency>
+            <dependency>
+                <groupId>org.springframework.cloud</groupId>
+                <artifactId>spring-cloud-dependencies</artifactId>
+                <version>${spring-cloud.version}</version>
+                <type>pom</type>
+                <scope>import</scope>
             </dependency>
         </dependencies>
     </dependencyManagement>

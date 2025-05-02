@@ -32,7 +32,7 @@ services:
     networks:
       - local-network
 
-  ######## debezium connect (!same for all services) ########
+  ######## debezium connect ########
   connect:
     image: debezium/strimzi-connect
     container_name: 'connect'
@@ -92,7 +92,7 @@ services:
     ports:
       - '5433:5432'
     volumes:
-      - './hotel-service/init-hotel.sql:/docker-entrypoint-initdb.d/init.sql'
+      - './services/hotel-service/init-hotel.sql:/docker-entrypoint-initdb.d/init.sql'
     command: "postgres -c wal_level=logical"
     healthcheck:
       test: "pg_isready -U hoteluser -d hoteldb"
@@ -103,14 +103,17 @@ services:
     container_name: 'hotel-service'
     build:
       context: .
-      dockerfile: hotel-service/Dockerfile.dev
+      dockerfile: services/hotel-service/Dockerfile.dev
     environment:
       - POSTGRES_HOST=hotel-db
       - POSTGRES_PORT=5432
+      - SPRING_KAFKA_BOOTSTRAP_SERVERS=kafka:9092
     ports:
       - '8082:8080'
     depends_on:
       hotel-db:
+        condition: service_healthy
+      kafka:
         condition: service_healthy
     networks:
       - local-network
@@ -128,7 +131,7 @@ services:
     ports:
       - '5434:5432'
     volumes:
-      - './payment-service/init-payment.sql:/docker-entrypoint-initdb.d/init.sql'
+      - './services/payment-service/init-payment.sql:/docker-entrypoint-initdb.d/init.sql'
     command: "postgres -c wal_level=logical"
     healthcheck:
       test: "pg_isready -U paymentuser -d paymentdb"
@@ -139,14 +142,17 @@ services:
     container_name: 'payment-service'
     build:
       context: .
-      dockerfile: payment-service/Dockerfile.dev
+      dockerfile: services/payment-service/Dockerfile.dev
     environment:
       - POSTGRES_HOST=payment-db
       - POSTGRES_PORT=5432
+      - SPRING_KAFKA_BOOTSTRAP_SERVERS=kafka:9092
     ports:
       - '8081:8080'
     depends_on:
       payment-db:
+        condition: service_healthy
+      kafka:
         condition: service_healthy
     networks:
       - local-network
@@ -164,7 +170,7 @@ services:
     ports:
       - '5432:5432'
     volumes:
-      - './reservation-service/init-reservation.sql:/docker-entrypoint-initdb.d/init.sql'
+      - './services/reservation-service/init-reservation.sql:/docker-entrypoint-initdb.d/init.sql'
     command: "postgres -c wal_level=logical"
     healthcheck:
       test: "pg_isready -U reservationuser -d reservationdb"
@@ -175,14 +181,17 @@ services:
     container_name: 'reservation-service'
     build:
       context: .
-      dockerfile: reservation-service/Dockerfile.dev
+      dockerfile: services/reservation-service/Dockerfile.dev
     ports:
       - '8080:8080'
     environment:
       - POSTGRES_HOST=reservation-db
       - POSTGRES_PORT=5432
+      - SPRING_KAFKA_BOOTSTRAP_SERVERS=kafka:9092
     depends_on:
       reservation-db:
+        condition: service_healthy
+      kafka:
         condition: service_healthy
     networks:
       - local-network
@@ -195,22 +204,36 @@ services:
       - kafka
       - connect
     volumes:
-      - $PWD/hotel-service/hotel-outbox-connector.json:/tmp/connectors/hotel-outbox-connector.json
-      - $PWD/payment-service/payment-outbox-connector.json:/tmp/connectors/payment-outbox-connector.json
-      - $PWD/reservation-service/reservation-outbox-connector.json:/tmp/connectors/reservation-outbox-connector.json
+      - ./services/hotel-service/hotel-outbox-connector.json:/tmp/connectors/hotel-outbox-connector.json
+      - ./services/payment-service/payment-outbox-connector.json:/tmp/connectors/payment-outbox-connector.json
+      - ./services/reservation-service/reservation-outbox-connector.json:/tmp/connectors/reservation-outbox-connector.json
     command: "bash -c 'echo Waiting for Kafka to be ready... && \
                        cub kafka-ready -b kafka:9092 1 20 && \
                        echo Waiting 20 seconds for Connect to be ready... && \
                        sleep 20 && \
                        curl -i -X PUT -H Accept:application/json -H Content-Type:application/json http://connect:8083/connectors/hotel-outbox-connector/config -d @/tmp/connectors/hotel-outbox-connector.json && \
                        curl -i -X PUT -H Accept:application/json -H Content-Type:application/json http://connect:8083/connectors/payment-outbox-connector/config -d @/tmp/connectors/payment-outbox-connector.json && \
-                       curl -i -X PUT -H Accept:application/json -H Content-Type:application/json http://connect:8083/connectors/reservation-outbox-connector/config -d @/tmp/connectors/reservation-outbox-connector.json
-                  '"
+                       curl -i -X PUT -H Accept:application/json -H Content-Type:application/json http://connect:8083/connectors/reservation-outbox-connector/config -d @/tmp/connectors/reservation-outbox-connector.json'"
     environment:
-      # The following settings are listed here only to satisfy the image's requirements.
-      # We override the image's `command` anyways, hence this container will not start a broker.
       KAFKA_BROKER_ID: ignored
       KAFKA_ZOOKEEPER_CONNECT: ignored
+    networks:
+      - local-network
+
+  # api-gateway
+  api-gateway:
+    container_name: 'api-gateway'
+    build:
+      context: .
+      dockerfile: api-gateway/Dockerfile
+    ports:
+      - '8085:8085'
+    environment:
+      - SPRING_MAIN_WEB_APPLICATION_TYPE=reactive
+    depends_on:
+      - reservation-service
+      - payment-service
+      - hotel-service
     networks:
       - local-network
 

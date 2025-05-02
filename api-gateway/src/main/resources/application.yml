@@ -1,0 +1,15 @@
+server:
+  port: 8085
+
+spring:
+  main:
+    web-application-type: reactive
+  application:
+    name: api-gateway
+  cloud:
+    gateway:
+      routes:        
+        - id: reservation-service
+          uri: http://reservation-service:8080
+          predicates:
+            - Path=/api/v1/reservations/**
