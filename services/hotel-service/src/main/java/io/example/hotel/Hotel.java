@@ -8,7 +8,6 @@ import java.io.Serializable;
 import java.time.Instant;
 
 import static lombok.AccessLevel.PACKAGE;
-import static lombok.AccessLevel.PRIVATE;
 
 @Entity
 @Table(name = "hotel")
@@ -20,7 +19,7 @@ public class Hotel {
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private HotelIdentifier id;
 
-    private final Instant creationTime;
+    private final Instant creationTime = Instant.now();
 
     private String name;
     private String address;
@@ -31,12 +30,28 @@ public class Hotel {
         this.name = name;
         this.address = address;
         this.location = location;
-        this.creationTime = Instant.now();
+    }
+
+    // Getter methods
+    public HotelIdentifier getId() {
+        return id;
+    }
+
+    public String getName() {
+        return name;
+    }
+
+    public String getAddress() {
+        return address;
+    }
+
+    public String getLocation() {
+        return location;
     }
 
     @Embeddable
     public record HotelIdentifier(Integer id) implements Serializable {
-
+        @Override
         public String toString() {
             return id.toString();
         }
