@@ -14,6 +14,7 @@ public class RoomController {
     private final Rooms rooms;
 
     @GetMapping
+    @CrossOrigin(origins = "http://localhost:5500")
     public List<RoomDTO> listRooms() {
         return StreamSupport.stream(rooms.findAll().spliterator(), false)
                 .map(RoomDTO::from)

@@ -25,6 +25,7 @@ final class ReservationController {
     private final Reservations reservations;
 
     @PostMapping(consumes = APPLICATION_JSON_VALUE, produces = APPLICATION_JSON_VALUE)
+    @CrossOrigin(origins = "http://localhost:5500")
     ResponseEntity<?> recordReservation(@RequestBody RoomReservationCmd cmd) {
         var reservation = roomReservationUseCase.make(cmd);
         return ResponseEntity.accepted()
@@ -34,6 +35,7 @@ final class ReservationController {
     }
 
     @GetMapping(path = "/{reservationId}", produces = APPLICATION_JSON_VALUE)
+    @CrossOrigin(origins = "http://localhost:5500")
     ResponseEntity<?> status(@PathVariable UUID reservationId) {
         var reservation = reservations.findById(new Reservation.ReservationIdentifier(reservationId)); // FIXME: handle not found
 
