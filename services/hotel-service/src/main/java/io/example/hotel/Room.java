@@ -19,7 +19,7 @@ public class Room {
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private RoomIdentifier id;
 
-    private final Instant creationTime;
+    private final Instant creationTime = Instant.now();
 
     private String name;
     private Integer number;
@@ -31,12 +31,11 @@ public class Room {
     private Hotel hotel;
 
     public Room(RoomIdentifier id, String name, Integer number, Integer floor, Hotel hotel) {
-        this.id = id; // TODO exposed only for demo purpose
+        this.id = id;
         this.name = name;
         this.number = number;
         this.floor = floor;
         this.available = true;
-        this.creationTime = Instant.now();
         this.hotel = hotel;
     }
 
@@ -52,9 +51,33 @@ public class Room {
         this.available = true;
     }
 
+    public RoomIdentifier getId() {
+        return id;
+    }
+
+    public String getName() {
+        return name;
+    }
+
+    public Integer getNumber() {
+        return number;
+    }
+
+    public Integer getFloor() {
+        return floor;
+    }
+
+    public Boolean getAvailable() {
+        return available;
+    }
+
+    public Hotel getHotel() {
+        return hotel;
+    }
+
     @Embeddable
     public record RoomIdentifier(Integer id) implements Serializable {
-
+        @Override
         public String toString() {
             return id.toString();
         }

@@ -5,9 +5,9 @@ info:
   version: 1.0.0
 
 servers:
-  - url: http://localhost:8080/v1
+  - url: http://localhost:8085/api/v1
     description: Local development server
-  - url: http://reservation-service:8080/v1
+  - url: http://reservation-service:8085/api/v1
     description: Reservation service in Docker Compose environment
 
 paths:
