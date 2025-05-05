@@ -18,6 +18,7 @@
         <module>services/hotel-service</module>
         <module>services/payment-service</module>
         <module>services/reservation-service</module>
+        <module>services/guest-service</module>
         <module>api-gateway</module>
     </modules>
     <description>Spring-Boot Saga Orchestration Demo</description>

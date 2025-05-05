@@ -13,3 +13,7 @@ spring:
           uri: http://reservation-service:8080
           predicates:
             - Path=/api/v1/reservations/**
+        - id: guest-service
+          uri: http://guest-service:8080
+          predicates:
+            - Path=/api/v1/guests/**
