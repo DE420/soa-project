@@ -14,7 +14,6 @@ public class HotelController {
     private final Hotels hotels;
 
     @GetMapping
-    @CrossOrigin(origins = "http://localhost:5500")
     public List<HotelDTO> listHotels() {
         return StreamSupport.stream(hotels.findAll().spliterator(), false)
                 .map(HotelDTO::from)

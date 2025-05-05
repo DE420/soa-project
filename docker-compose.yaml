@@ -222,6 +222,15 @@ services:
     networks:
       - local-network
 
+  frontend:
+    build:
+      context: .
+      dockerfile: frontend/Dockerfile
+    ports:
+      - "3000:3000"  
+    networks:
+      - local-network
+
   # api-gateway
   api-gateway:
     container_name: 'api-gateway'

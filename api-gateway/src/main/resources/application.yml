@@ -2,12 +2,38 @@ server:
   port: 8085
 
 spring:
+  
   main:
     web-application-type: reactive
   application:
     name: api-gateway
+  cors:
+    allowedOrigins: "http://localhost:3000"  
+    allowedMethods:
+      - GET
+      - POST
+      - PUT
+      - DELETE
+    allowedHeaders:
+      - Content-Type
+      - Authorization
+      - X-Custom-Header  
   cloud:
     gateway:
+      default-filters:
+        - DedupeResponseHeader=Access-Control-Allow-Credentials Access-Control-Allow-Origin
+      globalcors:
+        corsConfigurations:
+          "[/**]":
+            allowedOrigins: "http://localhost:3000"
+            allowedMethods:
+              - GET
+              - POST
+              - PUT
+              - DELETE
+            allowedHeaders:
+              - "*"
+            allowCredentials: true
       routes:        
         - id: reservation-service
           uri: http://reservation-service:8080
@@ -23,6 +49,6 @@ spring:
           uri: http://hotel-service:8080
           predicates:
             - Path=/api/v1/rooms/**
-         
+          
        
           
