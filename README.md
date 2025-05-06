@@ -280,8 +280,30 @@ Hệ thống bao gồm các dịch vụ chính:
     docker-compose up --build
 
 ## 🧪 **Diagrams**
-![service configration](docs/asset/Reservation_process.jpg)
+![service configration](docs/asset/service%20config.jpg)
 
+![Reservation process](docs/asset/Reservation_process.jpg)
+
+![Happy route](docs/asset/Successful_route.jpg)
+
+![Project Workflow](docs/asset/Flow.jpg)
+
+![Success Sequence](docs/asset/Success%20sequence.jpg)
+
+![Unhappy Sequence](docs/asset/Failed%20route%20sequence.jpg)
+
+![Reservation process](docs/asset/Reservation_process.jpg)
+
+![Reservation process](docs/asset/Reservation_process.jpg)
+
+![Reservation process](docs/asset/Reservation_process.jpg)
+
+**Database services:**
+![Reservation service db](docs/asset/reservation-servicedb.jpg)
+
+![Hotel service db](docs/asset/hoteldb.jpg)
+
+![Payment service db](docs/asset/payment-service%20db.jpg)
 
 ---
 
