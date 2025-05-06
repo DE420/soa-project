@@ -30,7 +30,6 @@ async function loadRooms() {
             const response = await fetch(`http://localhost:8085/api/v1/rooms?hotelId=${hotelId}`);
             const rooms = await response.json();
 
-
             rooms.forEach(room => {
                 const li = document.createElement('li');
                 li.textContent = `${room.id} - ${room.available ? 'Còn phòng' : 'Hết phòng'}`;
@@ -46,35 +45,11 @@ async function loadRooms() {
     }
 }
 
-function filterHotels() {
-    const hotelCode = document.getElementById('hotelCode').value.toLowerCase();
-    const hotelSelect = document.getElementById('hotelSelect');
-
-    hotelSelect.innerHTML = '<option value="">-- Chọn khách sạn --</option>';
-
-    fetch('http://localhost:8085/api/v1/hotels')
-        .then(response => response.json())
-        .then(hotels => {
-            hotels.forEach(hotel => {
-                if (hotel.code.toLowerCase().includes(hotelCode)) {
-                    const option = document.createElement('option');
-                    option.value = hotel.id;
-                    option.textContent = `${hotel.id} - ${hotel.name}`;
-                    hotelSelect.appendChild(option);
-                }
-            });
-        })
-        .catch(error => {
-            console.error('Error fetching hotels:', error);
-        });
-}
-
 async function submitReservation() {
-    // Lấy giá trị từ input
     const hotelId = document.getElementById('hotelSelect').value;
-    const roomCode = document.getElementById('roomCode').value;
+    const roomId = document.getElementById('roomCode').value;
 
-    if (!hotelId || !roomCode) {
+    if (!hotelId || !roomId) {
         alert('Vui lòng chọn khách sạn và phòng.');
         return;
     }
@@ -87,7 +62,7 @@ async function submitReservation() {
 
     const reservationData = {
         hotelId: parseInt(hotelId),
-        roomId: parseInt(roomCode),
+        roomId: parseInt(roomId),
         startDate: startDate,
         endDate: endDate,
         guestId: guestId,
@@ -105,7 +80,26 @@ async function submitReservation() {
         });
 
         if (response.ok) {
-            alert('Đặt phòng thành công!');
+            const locationHeader = response.headers.get('Location');
+            console.log('test', locationHeader)
+            setTimeout(async () => {
+                const reservationId = locationHeader.split('/').pop();
+
+                console.log('Reservation ID:', reservationId);
+
+                const statusResponse = await fetch(`http://localhost:8085/api/v1/reservations/${reservationId}`);
+                if (statusResponse.ok) {
+                    const statusData = await statusResponse.json();
+                    if (statusData.status === 'SUCCEED') {
+                        alert('Đặt phòng thành công!');
+                    } else {
+                        alert('Đặt phòng thất bại: Phòng đã được đặt bởi người khác');
+                    }
+
+                } else {
+                    alert('Không thể lấy trạng thái đặt phòng');
+                }
+            }, 1000);
         } else {
             alert('Đặt phòng thất bại. Vui lòng thử lại!');
         }
@@ -115,7 +109,7 @@ async function submitReservation() {
     }
 }
 
-window.onload = () => {
-    loadHotels();
-    document.getElementById('submitButton').addEventListener('click', submitReservation);
-};
+
+document.getElementById('submitButton').addEventListener('click', submitReservation);
+
+window.onload = loadHotels;
