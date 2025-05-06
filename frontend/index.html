@@ -4,7 +4,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Danh sách Khách sạn</title>
+    <title>Đặt phòng khách sạn</title>
     <style>
         body {
             font-family: Arial, sans-serif;
@@ -36,25 +36,35 @@
 
 <body>
 
-    <h1>Danh sách Khách sạn</h1>
+    <h1>Đặt phòng Khách sạn</h1>
+
+    <!-- Form nhập thông tin khách hàng -->
+    <div>
+        <label for="guestName">Tên khách hàng:</label>
+        <input type="text" id="guestName" placeholder="Nhập tên khách hàng">
+
+        <label for="guestPhone">Số điện thoại:</label>
+        <input type="text" id="guestPhone" placeholder="Nhập số điện thoại">
+
+        <label for="guestAddress">Địa chỉ:</label>
+        <input type="text" id="guestAddress" placeholder="Nhập địa chỉ">
+
+        <button id="submitGuestButton">Gửi thông tin khách hàng</button>
+    </div>
 
     <div>
+        <h3>Chọn khách sạn</h3>
         <label for="hotelSelect">Chọn Khách sạn:</label>
         <select id="hotelSelect" onchange="loadRooms()">
             <option value="">-- Chọn khách sạn --</option>
         </select>
     </div>
 
-
-
     <div id="roomsContainer" style="display:none;">
-        <h2>Danh sách phòng</h2>
-        <ul id="roomsList"></ul>
-    </div>
-
-    <div>
-        <label for="roomCode">Mã phòng:</label>
-        <input type="text" id="roomCode">
+        <h3>Chọn phòng</h3>
+        <select id="roomCode">
+            <option value="">-- Chọn phòng --</option>
+        </select>
     </div>
 
     <div>

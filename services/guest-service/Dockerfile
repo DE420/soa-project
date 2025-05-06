@@ -18,15 +18,15 @@ COPY services/reservation-service/pom.xml ./services/reservation-service/pom.xml
 COPY services/guest-service/pom.xml ./services/guest-service/pom.xml
 COPY api-gateway/pom.xml ./api-gateway/pom.xml
 
-# Download dependencies for payment-service and its dependencies
-RUN ./mvnw dependency:go-offline -pl services/payment-service -am
+# Download dependencies for guest-service and its dependencies
+RUN ./mvnw dependency:go-offline -pl services/guest-service -am
 
-# Copy the application source code for payment-service and its dependencies
+# Copy the application source code for guest-service and its dependencies
 COPY outbox/src/main ./outbox/src/main
-COPY services/payment-service/src/main ./services/payment-service/src/main
+COPY services/guest-service/src/main ./services/guest-service/src/main
 
-# Build the payment-service module
-RUN ./mvnw clean install -pl services/payment-service -am
+# Build the guest-service module
+RUN ./mvnw clean install -pl services/guest-service -am
 
 # Switch to a new stage with the JRE-only base image
 FROM eclipse-temurin:21-jre-jammy
@@ -38,7 +38,7 @@ WORKDIR /opt/app
 EXPOSE 8080
 
 # Copy the JAR file from the builder stage
-COPY --from=builder /opt/app/services/payment-service/target/*.jar /opt/app/app.jar
+COPY --from=builder /opt/app/services/guest-service/target/guest-service-1.0-SNAPSHOT.jar /opt/app/app.jar
 
 # Define the entry point to run the application
 ENTRYPOINT ["java", "-jar", "/opt/app/app.jar"]

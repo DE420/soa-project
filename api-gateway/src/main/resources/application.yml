@@ -50,5 +50,7 @@ spring:
           predicates:
             - Path=/api/v1/rooms/**
           
-       
-          
+        - id: guest-service
+          uri: http://guest-service:8080
+          predicates:
+            - Path=/api/v1/guests/**

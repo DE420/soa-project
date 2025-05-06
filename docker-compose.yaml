@@ -248,6 +248,38 @@ services:
     networks:
       - local-network
 
+  #guest service
+  guest-db:
+    image: 'postgres:16'
+    container_name: 'guest-db'
+    restart: unless-stopped
+    environment:
+      - POSTGRES_USER=guestuser
+      - POSTGRES_PASSWORD=secret
+      - POSTGRES_DB=guestdb
+    ports:
+      - '5435:5432' # Thay đổi cổng host thành 5435
+    volumes:
+      - './services/guest-service/init-guest.sql:/docker-entrypoint-initdb.d/init.sql'
+    networks:
+      - local-network
+
+  guest-service:
+    container_name: 'guest-service'
+    build:
+      context: .
+      dockerfile: services/guest-service/Dockerfile
+    environment:
+      - SPRING_DATASOURCE_URL=jdbc:postgresql://guest-db:5432/guestdb
+      - SPRING_DATASOURCE_USERNAME=guestuser
+      - SPRING_DATASOURCE_PASSWORD=secret
+    ports:
+      - '8084:8080' # Thay đổi cổng host thành 8084
+    depends_on:
+      - guest-db
+    networks:
+      - local-network
+
 networks:
   local-network:
     name: saga-orchestration-network
