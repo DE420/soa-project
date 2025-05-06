@@ -1,0 +1,67 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Danh sách Khách sạn</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            padding: 20px;
+        }
+
+        h1 {
+            color: #333;
+        }
+
+        select,
+        input {
+            padding: 8px;
+            margin: 10px 0;
+            width: 100%;
+            max-width: 300px;
+        }
+
+        ul {
+            list-style-type: none;
+            padding: 0;
+        }
+
+        li {
+            margin: 5px 0;
+        }
+    </style>
+</head>
+
+<body>
+
+    <h1>Danh sách Khách sạn</h1>
+
+    <div>
+        <label for="hotelSelect">Chọn Khách sạn:</label>
+        <select id="hotelSelect" onchange="loadRooms()">
+            <option value="">-- Chọn khách sạn --</option>
+        </select>
+    </div>
+
+
+
+    <div id="roomsContainer" style="display:none;">
+        <h2>Danh sách phòng</h2>
+        <ul id="roomsList"></ul>
+    </div>
+
+    <div>
+        <label for="roomCode">Mã phòng:</label>
+        <input type="text" id="roomCode">
+    </div>
+
+    <div>
+        <button id="submitButton">Đặt phòng</button>
+    </div>
+
+    <script src="app.js"></script>
+</body>
+
+</html>

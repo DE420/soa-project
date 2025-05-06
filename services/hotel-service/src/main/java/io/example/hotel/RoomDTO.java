@@ -9,13 +9,18 @@ public record RoomDTO(
         Integer hotelId
 ) {
     public static RoomDTO from(Room room) {
+        Integer hotelId = null;
+        if (room.getHotel() != null && room.getHotel().getId() != null) {
+            hotelId = room.getHotel().getId().id();
+        }
+
         return new RoomDTO(
-                room.getId().id(),
+                room.getId() != null ? room.getId().id() : null,
                 room.getName(),
                 room.getNumber(),
                 room.getFloor(),
                 room.getAvailable(),
-                room.getHotel().getId().id()
+                hotelId
         );
     }
 }
