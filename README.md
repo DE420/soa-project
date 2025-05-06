@@ -1,139 +1,290 @@
-# Saga Orchestration Pattern: Use Case Implementation
+**Saga Orchestration Microservices**
 
-###### Transactional Outbox + Change Data Capture with Debezium
+Dự án này triển khai Saga Orchestration Pattern để quản lý trong hệ thống microservices, mô phỏng quy trình đặt phòng khách sạn. Các dịch vụ giao tiếp thông qua Apache Kafka, với Debezium hỗ trợ đồng bộ dữ liệu từ cơ sở dữ liệu sang Kafka topics.
 
-###### _Tech Stack: Java 21, Spring-Boot and Apache Kafka_
+# Folder Structure
+```
+├── README.md
+├── api-gateway
+│   ├── Dockerfile
+│   ├── pom.xml
+│   └── src
+│       └── main
+│           ├── java
+│           │   └── io
+│           │       └── example
+│           │           └── apigateway
+│           │               ├── ApiGatewayApplication.java
+│           │               └── CorsGlobalConfiguration.java
+│           └── resources
+│               └── application.yml
+├── debezium-strimzi
+│   └── Dockerfile
+├── docker-compose.yaml
+├── docs
+│   ├── analysis-and-design.md
+│   ├── api-specs
+│   │   ├── reservation-service.yaml
+│   │   
+│   ├── architecture.md
+│   └── asset
+│       ├── Failed route sequence.jpg
+│       ├── Flow.jpg
+│       ├── Reservation_process.jpg
+│       ├── Success sequence.jpg
+│       ├── Successful_route.jpg
+│       ├── hoteldb.jpg
+│       ├── payment-service db.jpg
+│       ├── reservation-servicedb.jpg
+│       ├── service config.jpg
+│       └── treeview.txt
+├── frontend
+│   ├── Dockerfile
+│   ├── app.js
+│   └── index.html
+├── gateway
+│   └── Dockerfile
+├── mvnw
+├── mvnw.cmd
+├── outbox
+│   ├── README.md
+│   ├── pom.xml
+│   └── src
+│       └── main
+│           ├── java
+│           │   └── io
+│           │       └── example
+│           │           └── outbox
+│           │               ├── Outbox.java
+│           │               ├── OutboxConfig.java
+│           │               ├── OutboxEvent.java
+│           │               └── OutboxEventDispatcher.java
+│           └── resources
+│               └── db
+│                   └── migration
+│                       └── V0__outbox_events.sql
+├── pom.xml
+├── register-connectors.sh
+├── scripts
+│   ├── consume-kafka-topic.sh
+│   ├── create-kafka-topics.sh
+│   └── list-kafka-topics.sh
+└── services
+    ├── guest-service
+    │   ├── Dockerfile
+    │   ├── init-guest.sql
+    │   ├── pom.xml
+    │   └── src
+    │       └── main
+    │           ├── java
+    │           │   └── io
+    │           │       └── example
+    │           │           └── guest
+    │           │               ├── Guest.java
+    │           │               ├── GuestController.java
+    │           │               ├── GuestRepository.java
+    │           │               └── GuestServiceApplication.java
+    │           └── resources
+    │               ├── application.yml
+    │               └── db
+    │                   └── migration
+    │                       └── V1__init_guest_schema.sql
+    ├── hotel-service
+    │   ├── Dockerfile.dev
+    │   ├── connectdb.properties
+    │   ├── hotel-outbox-connector.json
+    │   ├── init-hotel.sql
+    │   ├── parent.pom.xml
+    │   ├── pom.xml
+    │   └── src
+    │       └── main
+    │           ├── java
+    │           │   └── io
+    │           │       └── example
+    │           │           └── hotel
+    │           │               ├── Hotel.java
+    │           │               ├── HotelDTO.java
+    │           │               ├── HotelServiceApplication.java
+    │           │               ├── Hotels.java
+    │           │               ├── Room.java
+    │           │               ├── RoomDTO.java
+    │           │               ├── Rooms.java
+    │           │               ├── SecurityConfig.java
+    │           │               ├── messaging
+    │           │               │   ├── KafkaConfig.java
+    │           │               │   ├── RoomBookingEvent.java
+    │           │               │   ├── RoomBookingEventHandler.java
+    │           │               │   ├── RoomBookingEventPayload.java
+    │           │               │   ├── RoomBookingInboxEventsConsumer.java
+    │           │               │   ├── RoomBookingRequestStatus.java
+    │           │               │   ├── RoomBookingRequestType.java
+    │           │               │   └── log
+    │           │               │       ├── EventLog.java
+    │           │               │       └── EventLogs.java
+    │           │               └── web
+    │           │                   ├── HotelController.java
+    │           │                   └── RoomController.java
+    │           └── resources
+    │               ├── application.properties
+    │               └── db
+    │                   └── migration
+    │                       ├── V1__eventlog_schema.sql
+    │                       ├── V2__hotel_schema.sql
+    │                       ├── V3__room_schema.sql
+    │                       └── V99__demodata.sql
+    ├── payment-service
+    │   ├── Dockerfile.dev
+    │   ├── init-payment.sql
+    │   ├── parent.pom.xml
+    │   ├── payment-outbox-connector.json
+    │   ├── pom.xml
+    │   ├── src
+    │   │   └── main
+    │   │       ├── java
+    │   │       │   └── io
+    │   │       │       └── example
+    │   │       │           └── payment
+    │   │       │               ├── Payment.java
+    │   │       │               ├── PaymentRequestType.java
+    │   │       │               ├── PaymentServiceApplication.java
+    │   │       │               ├── PaymentStatus.java
+    │   │       │               ├── Payments.java
+    │   │       │               └── messaging
+    │   │       │                   ├── KafkaConfig.java
+    │   │       │                   ├── PaymentEvent.java
+    │   │       │                   ├── PaymentEventHandler.java
+    │   │       │                   ├── PaymentInboxEventConsumer.java
+    │   │       │                   └── log
+    │   │       │                       ├── EventLog.java
+    │   │       │                       └── EventLogs.java
+    │   │       └── resources
+    │   │           ├── application.properties
+    │   │           └── db
+    │   │               └── migration
+    │   │                   ├── V1__eventlog_schema.sql
+    │   │                   └── V2__payment_schema.sql
+    │   └── target
+    │       ├── classes
+    │       │   ├── application.properties
+    │       │   ├── db
+    │       │   │   └── migration
+    │       │   │       ├── V1__eventlog_schema.sql
+    │       │   │       └── V2__payment_schema.sql
+    │       │   └── io
+    │       │       └── example
+    │       │           └── payment
+    │       │               ├── Payment.class
+    │       │               ├── PaymentRequestType.class
+    │       │               ├── PaymentServiceApplication.class
+    │       │               ├── PaymentStatus.class
+    │       │               ├── Payments.class
+    │       │               └── messaging
+    │       │                   ├── KafkaConfig$KafkaTopic.class
+    │       │                   ├── KafkaConfig.class
+    │       │                   ├── PaymentEvent.class
+    │       │                   ├── PaymentEventHandler.class
+    │       │                   ├── PaymentInboxEventConsumer.class
+    │       │                   └── log
+    │       │                       ├── EventLog.class
+    │       │                       └── EventLogs.class
+    │       └── generated-sources
+    │           └── annotations
+    └── reservation-service
+        ├── Dockerfile.dev
+        ├── init-reservation.sql
+        ├── parent.pom.xml
+        ├── pom.xml
+        ├── reservation-outbox-connector.json
+        └── src
+            ├── main
+            │   ├── java
+            │   │   └── io
+            │   │       └── example
+            │   │           ├── config
+            │   │           │   └── WebConfig.java
+            │   │           └── reservation
+            │   │               ├── Reservation.java
+            │   │               ├── ReservationServiceApplication.java
+            │   │               ├── Reservations.java
+            │   │               ├── RoomReservationCmd.java
+            │   │               ├── RoomReservationUseCase.java
+            │   │               ├── framework
+            │   │               │   ├── EventLog.java
+            │   │               │   ├── Saga.java
+            │   │               │   ├── SagaState.java
+            │   │               │   ├── SagaStatus.java
+            │   │               │   └── SagaStepStatus.java
+            │   │               ├── messaging
+            │   │               │   ├── KafkaConfig.java
+            │   │               │   ├── KafkaFlightBookingConsumer.java
+            │   │               │   ├── PaymentEvent.java
+            │   │               │   ├── PaymentStatus.java
+            │   │               │   ├── ReservationPlacementEventHandler.java
+            │   │               │   ├── RoomBookingEvent.java
+            │   │               │   └── RoomBookingStatus.java
+            │   │               ├── saga
+            │   │               │   ├── RoomReservationSaga.java
+            │   │               │   ├── SagaEvent.java
+            │   │               │   └── SagaManager.java
+            │   │               └── web
+            │   │                   └── ReservationController.java
+            │   └── resources
+            │       ├── application.properties
+            │       └── db
+            │           └── migration
+            │               ├── V1__eventlog_schema.sql
+            │               ├── V2__sagastate_schema.sql
+            │               └── V3__reservation_schema.sql
+            └── test
+                ├── java
+                │   └── io
+                │       └── example
+                │           └── reservation
+                │               ├── MessagingCDCConfig.java
+                │               ├── TestContainersSetup.java
+                │               └── web
+                │                   └── BookRoomE2ETest.java
+                └── resources
+                    └── test-outbox-connector.json
+
+```
+**Mô tả dịch vụ**
+
+Hệ thống bao gồm các dịch vụ chính:
+1. Reservation service:
+    +) Quản lý yêu cầu đặt phòng từ người dùng.
+    +) Điều phối Saga, gửi lệnh đến các dịch vụ khác qua Kafka.
+    +) Lưu trữ trạng thái Saga trong cơ sở dữ liệu.
+2. Payment service:
+    +) Xử lý thanh toán cho các đặt phòng.
+3. Hotel service:
+    +) Kiểm tra và cập nhật tình trạng phòng.
+4. guest service: thu thập thông tin người dùng và hiển thị
+
+**Công nghệ**
+1. Java, Spring Boot: Xây dựng microservices.
+2. PostgreSQL: Lưu trữ dữ liệu.
+3. Docker, Docker Compose: Container hóa ứng dụng.
+4. Apache Kafka: Quản lý luồng sự kiện.
+5. Debezium: Đồng bộ dữ liệu từ cơ sở dữ liệu sang Kafka.
+## 🚀 Getting Started
+
+1. **Clone this repository**
+
+   ```bash
+   git clone [https://github.com/hungdn1701/microservices-assignment-starter.git](https://github.com/jnp2018/mid-project-107035731.git)
+   cd mid-project-107035731
+
+2. **Run with Docker Compose**
+
+    docker-compose up --build
+
+## 🧪 **Diagrams**
+![service configration](docs/asset/Reservation_process.jpg)
+
 
 ---
 
-This use case demonstrates how to implement the [**SAGA Pattern**](https://microservices.io/patterns/data/saga.html) to achieve distributed transactions across multiple microservices, assuming the implementation utilizes a [**Database per Service**](https://microservices.io/patterns/data/database-per-service.html) approach. The solution employs the [**Transactional Outbox Pattern**](https://microservices.io/patterns/data/transactional-outbox.html) in conjunction with Change Data Capture (CDC) and [**Debezium**](https://debezium.io/documentation/reference/stable/transformations/outbox-event-router.html) on top of Kafka Connect, and, [**Apache Kafka**](https://www.confluent.io/what-is-apache-kafka/) serves as the messaging backbone for the overall architecture.
-
-### Context:
-
-> **Use case**: _As a guest, I want to make a hotel reservation_
-
-There are 3 microservices involved:
-* `Reservation Service` - initiator and orchestrator of the Saga
-* `Hotel Service` - ensure the hotel's room requested is available and book it or rejects it if unavailable
-* `Payment Service` - executes the payment associated to an incoming reservation
-
-And we have the following service configuration:
-![Context Overview](assets/contextoverview.png)
-
-### Task: 
-Use the [**SAGA Orchestration Pattern**](https://microservices.io/post/sagas/2019/12/12/developing-sagas-part-4.html) to ensure data consistency between services.
-
-### Implementation
-The reservation process is as follows:
-![Reservation State](assets/reservationstate.png)
-
-The SAGA framework state machine happy path:
-![SagaStateMachine](assets/sagastatemachine.png)
-
-A detailed component workflow:
-![Use Case Overview](assets/usecaseoverview.png)
-
-A happy path for making a reservation is illustrated in the following _sequence diagram_:
-![Happy Path](assets/statediagramhappypath.png)
-
-An unhappy path of making a reservation, when the payment is rejected, and the _compensation_ step is involved you can see in the following _sequence diagram_:
-![Unhappy Path](assets/statediagramunhappypath.png)
-
-## Running the Use Case
-
-Start the docker compose (`docker-compose.yaml`)
-```console
-% docker-compose up --build
-```
-During the build process there is a _kafka-setup_ service which submit the debezium connectors
-
-Make a reservation
-```console
-% http POST http://localhost:8080/api/v1/reservations < e2e/room-reservation-placement.json
-
-HTTP/1.1 202
-Location: http://localhost:8080/api/v1/reservations/9a40b57d-36a1-4991-9b72-afdd41c154c0
-Retry-After: 0.5
-```
-
-Examine the emitted event for `room-booking.inbox.events` in Apache Kafka:
-```console
-% docker run --tty --rm \
-    --network saga-orchestration-network \
-    quay.io/debezium/tooling:1.2 \
-    kafkacat -b kafka:9092 -C -o beginning -q \
-    -f "{\"key\":%k, \"headers\":\"%h\"}\n%s\n" \
-    -t room-booking.inbox.events 
-    
-{"key":8877b9f1-28a0-42ef-9868-0288966f8a4c, "headers":"id=775f814a-4923-4f10-9b56-a4307a1ac800,eventType=REQUEST"}
-{"type":"REQUEST","roomId":1,"endDate":"2023-12-17","guestId":10000001,"hotelId":1,"startDate":"2023-12-16","paymentDue":1702632793441,"creditCardNo":"************7999","reservationId":"9a40b57d-36a1-4991-9b72-afdd41c154c0"}
-```
-
-and, the emitted event for `payment.inbox.events` in Apache Kafka:
-```console
-% docker run --tty --rm \
-    --network saga-orchestration-network \
-    quay.io/debezium/tooling:1.2 \
-    kafkacat -b kafka:9092 -C -o beginning -q \
-    -f "{\"key\":%k, \"headers\":\"%h\"}\n%s\n" \
-    -t payment.inbox.events 
-    
-{"key":8877b9f1-28a0-42ef-9868-0288966f8a4c, "headers":"id=1fb5030c-629a-4ec3-8b9b-57cdbb423309,eventType=REQUEST"}
-{"type":"REQUEST","roomId":1,"endDate":"2023-12-17","guestId":10000001,"hotelId":1,"startDate":"2023-12-16","paymentDue":1702632793441,"creditCardNo":"************7999","reservationId":"9a40b57d-36a1-4991-9b72-afdd41c154c0"}
-```
-
-Query the saga state in the reservation service's database:
-```console
-% docker run --tty --rm -i \
-        --network saga-orchestration-network \
-        quay.io/debezium/tooling:1.2 \
-        bash -c 'pgcli postgresql://reservationuser:secret@reservation-db:5432/reservationdb'
-
-SELECT * FROM public.sagastate;
-
-+--------------------------------------+-----------+------------------+---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------+----------------+-------------------------------------------------------+---------------+
-| id                                   | version   | type             | payload                                                                                                                                                                                                                                           | current_step   | step_status                                           | saga_status   |
-|--------------------------------------+-----------+------------------+---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------+----------------+-------------------------------------------------------+---------------|
-| 8877b9f1-28a0-42ef-9868-0288966f8a4c | 3         | room-reservation | {"type": "REQUEST", "roomId": 1, "endDate": "2023-12-17", "guestId": 10000001, "hotelId": 1, "startDate": "2023-12-16", "paymentDue": 1702632793441, "creditCardNo": "************7999", "reservationId": "9a40b57d-36a1-4991-9b72-afdd41c154c0"} | <null>         | {"payment": "SUCCEEDED", "room-booking": "SUCCEEDED"} | COMPLETED     |
-+--------------------------------------+-----------+------------------+---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------+----------------+-------------------------------------------------------+---------------+
-```
-
-And, also, query the location URL:
-```console
-% http GET http://localhost:8080/api/v1/reservations/9a40b57d-36a1-4991-9b72-afdd41c154c0 
-HTTP/1.1 200 
-Content-Type: application/json
-
-{
-    "guestId": 10000001,
-    "hotelId": 1,
-    "reservationId": "9a40b57d-36a1-4991-9b72-afdd41c154c0",
-    "roomId": 1,
-    "status": "SUCCEED"
-}
-```
-
-#### Checkout `e2e` folder with some unhappy scenarios
 
 
-### Run local using `spring-boot:run`
 
-```console
-% docker-compose up --build --scale reservation-service=0 --scale payment-service=0 --scale hotel-service=0
-```
-
-```console
-% ./mvnw install
-```
-
-```console
-% ./mvnw  spring-boot:run -f hotel-service/pom.xml  -Dspring-boot.run.arguments="--POSTGRES_PORT=5433 --server.port=8081"
-```
-
-```console
-% ./mvnw  spring-boot:run -f payment-service/pom.xml  -Dspring-boot.run.arguments="--POSTGRES_PORT=5434 --server.port=8082"
-```
-
-```console
-% ./mvnw  spring-boot:run -f reservation-service/pom.xml  -Dspring-boot.run.arguments="--POSTGRES_PORT=5432 --server.port=8080"
-```
